@@ -37,7 +37,7 @@ function demoUserInput() {
   const u = getTelegramUser();
   return u
     ? { telegramId: u.id, firstName: u.first_name, lastName: u.last_name, username: u.username, photoUrl: u.photo_url }
-    : { telegramId: 100000001, firstName: 'Александр', lastName: 'Демо', username: 'demo_user' };
+    : { telegramId: 100000001, firstName: 'Гость', username: 'demo_user' };
 }
 
 function fresh(mode: DemoResetMode): MockState {
@@ -45,13 +45,23 @@ function fresh(mode: DemoResetMode): MockState {
 }
 
 function load(): MockState {
+  let saved: MockState | null = null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as MockState;
+    if (raw) saved = JSON.parse(raw) as MockState;
   } catch {
     /* приватный режим / недоступное хранилище */
   }
-  return fresh('seeded');
+  if (!saved) return fresh('seeded');
+
+  // Данные сохранены для другого человека (или для демо-пользователя из браузера) —
+  // в Telegram всегда показываем текущего пользователя
+  const u = getTelegramUser();
+  if (u && saved.user.telegramId !== u.id) return fresh('seeded');
+  if (u) {
+    Object.assign(saved.user, { firstName: u.first_name, lastName: u.last_name, username: u.username, photoUrl: u.photo_url });
+  }
+  return saved;
 }
 
 let state: MockState = load();
