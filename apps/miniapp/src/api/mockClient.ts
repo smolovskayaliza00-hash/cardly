@@ -21,7 +21,7 @@ import { ApiError, type ApiClient } from './types';
  * Никаких реальных платежей и выпусков: все данные вымышленные и живут в localStorage.
  */
 
-const STORAGE_KEY = 'aurum-demo-state-v1';
+const STORAGE_KEY = 'cardly-demo-state-v1';
 const ISSUE_DURATION_MS = 2_800;
 const TOPUP_PROCESSING_MS = 2_500;
 const KYC_DURATION_MS = 3_500;

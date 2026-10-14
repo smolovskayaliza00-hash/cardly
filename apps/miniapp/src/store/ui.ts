@@ -38,7 +38,7 @@ export const useUi = create<UiState>()(
       toggleHideBalance: () => set((s) => ({ hideBalance: !s.hideBalance })),
       setTheme: (theme) => set({ theme }),
     }),
-    { name: 'aurum-ui', storage: safeStorage },
+    { name: 'cardly-ui', storage: safeStorage },
   ),
 );
 

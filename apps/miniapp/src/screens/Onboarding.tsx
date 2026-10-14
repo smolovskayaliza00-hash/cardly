@@ -18,7 +18,7 @@ const sample = (over: Partial<Card>): Card => ({
   currency: 'USD',
   status: 'active',
   design: 'gold',
-  label: 'Aurum',
+  label: BRAND.short,
   last4: '4821',
   holderName: 'YOUR NAME',
   expMonth: 9,
@@ -113,7 +113,7 @@ export function Onboarding() {
       <Toaster />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="gold-fill flex size-8 items-center justify-center rounded-xl text-[15px] font-black">A</div>
+          <div className="gold-fill flex size-8 items-center justify-center rounded-xl text-[15px] font-black">{BRAND.name[0]}</div>
           <span className="font-display text-[17px] font-bold tracking-tight">{BRAND.name}</span>
         </div>
         {!last && (

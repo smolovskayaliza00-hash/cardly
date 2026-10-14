@@ -1,10 +1,10 @@
 /**
- * Рабочее название и контакты. Замените на финальный бренд —
+ * Название и контакты бренда (бот @CardlyPayBot) —
  * всё приложение берёт значения отсюда.
  */
 export const BRAND = {
-  name: 'Aurum Cards',
-  short: 'Aurum',
-  supportUsername: 'aurum_support_demo',
+  name: 'Cardly Pay',
+  short: 'Cardly',
+  supportUsername: 'CardlyPayBot',
   version: '0.1.0-prototype',
 } as const;

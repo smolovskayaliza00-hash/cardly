@@ -1,10 +1,11 @@
-# Aurum Cards — Telegram Mini App (прототип)
+# Cardly Pay — Telegram Mini App (прототип)
 
 Интерактивный прототип Telegram Mini App для оформления виртуальных карт Visa / Mastercard
 с пополнением через СБП. **Работает только на демо-данных:** карты не выпускаются,
 платежи не проводятся, платёжные данные пользователей не запрашиваются.
 
-> «Aurum Cards» — рабочее название. Меняется в одном месте: `apps/miniapp/src/app/brand.ts`.
+> Бот: [@CardlyPayBot](https://t.me/CardlyPayBot) · приложение: https://smolovskayaliza00-hash.github.io/cardly/
+> Название бренда задаётся в одном месте: `apps/miniapp/src/app/brand.ts`.
 
 ## Что внутри
 
