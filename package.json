@@ -1,0 +1,19 @@
+{
+  "name": "cardapp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Telegram Mini App — виртуальные карты (прототип с демо-данными)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @cardapp/miniapp dev",
+    "dev:api": "pnpm --filter @cardapp/api dev",
+    "dev:http": "pnpm --filter @cardapp/miniapp dev:http",
+    "build": "pnpm --filter @cardapp/miniapp build",
+    "preview": "pnpm --filter @cardapp/miniapp preview",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  }
+}

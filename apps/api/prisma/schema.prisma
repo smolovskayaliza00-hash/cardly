@@ -1,0 +1,131 @@
+// ЧЕРНОВИК целевой схемы БД (этап 2). Prisma пока не установлена.
+// Суммы — в минорных единицах (BigInt), время — UTC.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum KycStatus {
+  none
+  pending
+  approved
+  rejected
+}
+
+enum CardStatus {
+  issuing
+  active
+  frozen
+  closed
+}
+
+enum TopUpStatus {
+  awaiting_payment
+  processing
+  succeeded
+  failed
+  expired
+}
+
+model User {
+  id                String        @id @default(cuid())
+  telegramId        BigInt        @unique
+  firstName         String
+  lastName          String?
+  username          String?
+  kycStatus         KycStatus     @default(none)
+  kycExternalId     String?
+  customerRef       String?       @unique // id клиента у партнёра-эмитента
+  createdAt         DateTime      @default(now())
+  cards             Card[]
+  subscriptions     Subscription[]
+  topUps            TopUp[]
+}
+
+model Subscription {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  tariffId    String
+  active      Boolean
+  renewsAt    DateTime?
+  canceledAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Card {
+  id                 String     @id @default(cuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id])
+  externalId         String     @unique // id карты у партнёра
+  provider           String
+  brand              String
+  currency           String
+  status             CardStatus
+  design             String
+  label              String
+  last4              String
+  expMonth           Int
+  expYear            Int
+  balanceMinor       BigInt     @default(0) // кэш; источник истины — партнёр
+  tariffId           String
+  limitPerTxMinor    BigInt
+  limitDailyMinor    BigInt
+  limitMonthlyMinor  BigInt
+  createdAt          DateTime   @default(now())
+  transactions       Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id             String   @id @default(cuid())
+  cardId         String
+  card           Card     @relation(fields: [cardId], references: [id])
+  externalId     String?  @unique
+  type           String
+  status         String
+  amountMinor    BigInt
+  currency       String
+  merchant       String
+  category       String
+  originalMinor  BigInt?
+  originalCcy    String?
+  createdAt      DateTime
+
+  @@index([cardId, createdAt])
+}
+
+model TopUp {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  cardId          String
+  externalId      String      @unique // id платежа у платёжного партнёра
+  method          String
+  status          TopUpStatus
+  amountRubMinor  BigInt
+  feeRubMinor     BigInt
+  rate            Decimal     @db.Decimal(18, 6)
+  creditedMinor   BigInt
+  expiresAt       DateTime
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+/// Журнал входящих вебхуков: аудит и идемпотентность
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventId     String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
