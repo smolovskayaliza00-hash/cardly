@@ -39,7 +39,7 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
       className={`relative h-7 w-12 rounded-full transition-colors ${on ? 'bg-gold' : 'bg-surface-3'}`}
     >
       <span
-        className={`absolute top-0.5 size-6 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
+        className={`absolute top-0.5 left-0 size-6 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
       />
     </button>
   );

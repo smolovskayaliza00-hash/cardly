@@ -36,13 +36,12 @@ export function History() {
     return out;
   }, [txs]);
 
-  const fmt = (k: 'in' | 'out') =>
-    hidden
-      ? '••••'
-      : (['USD', 'EUR'] as const)
-          .filter((c) => summary[c][k] > 0)
-          .map((c) => formatMoney(summary[c][k], c))
-          .join(' · ') || '—';
+  const fmt = (k: 'in' | 'out') => {
+    if (hidden) return '••••';
+    const parts = (['USD', 'EUR'] as const).filter((c) => summary[c][k] > 0);
+    if (!parts.length) return '—';
+    return parts.map((c) => <div key={c}>{formatMoney(summary[c][k], c)}</div>);
+  };
 
   return (
     <div>

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import type { Card } from '@cardapp/shared';
 import { BRAND } from '../app/brand';
 import { CardVisual } from '../components/CardVisual';
-import { MainButton } from '../components/MainButton';
+import { MainButton, MainButtonSpacer } from '../components/MainButton';
 import { Toaster } from '../components/Toast';
 import { haptic } from '../lib/telegram';
 import { useApplyTheme } from '../lib/theme';
@@ -37,7 +37,7 @@ function HeroCards() {
     { c: sample({ design: 'gold' }), r: -3, x: 0, y: -10 },
   ];
   return (
-    <div className="relative mx-auto h-[250px] w-full max-w-[340px]">
+    <div className="relative mx-auto h-[230px] w-full max-w-[340px]">
       {cards.map(({ c, r, x, y }, i) => (
         <motion.div
           key={i}
@@ -55,7 +55,7 @@ function HeroCards() {
 
 function IconHero({ icon: Icon }: { icon: typeof Zap }) {
   return (
-    <div className="flex h-[250px] items-center justify-center">
+    <div className="flex h-[190px] items-center justify-center">
       <motion.div
         initial={{ scale: 0.6, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -140,10 +140,10 @@ export function Onboarding() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
             transition={{ duration: 0.25 }}
-            className="mt-6 flex flex-col"
+            className="mt-4 flex flex-col"
           >
             {slide.hero}
-            <h1 className="font-display mt-8 text-[32px] leading-[1.1] font-bold tracking-tight whitespace-pre-line">
+            <h1 className="font-display mt-6 text-[32px] leading-[1.1] font-bold tracking-tight whitespace-pre-line">
               {slide.title}
             </h1>
             <p className="mt-3 text-[16px] leading-relaxed text-muted">{slide.text}</p>
@@ -151,7 +151,7 @@ export function Onboarding() {
         </AnimatePresence>
       </motion.div>
 
-      <div className="mt-6 mb-4 flex justify-center gap-1.5">
+      <div className="mt-4 mb-4 flex justify-center gap-1.5">
         {SLIDES.map((_, k) => (
           <span
             key={k}
@@ -183,10 +183,12 @@ export function Onboarding() {
         </button>
       )}
 
-      <div className="flex items-center gap-2 pb-2 text-[12px] text-faint">
-        <Globe2 className="size-3.5" /> Доступность услуги зависит от страны и требований партнёра-эмитента
-      </div>
-      <div className="h-24" />
+      {!last && (
+        <div className="flex items-center gap-2 pb-2 text-[12px] text-faint">
+          <Globe2 className="size-3.5" /> Доступность услуги зависит от страны и требований партнёра-эмитента
+        </div>
+      )}
+      <MainButtonSpacer />
       <MainButton text={last ? 'Начать' : 'Далее'} onClick={next} disabled={last && !accepted} />
     </div>
   );

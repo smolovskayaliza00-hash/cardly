@@ -171,8 +171,8 @@ export function CardVisual({
         <div className="flex items-end justify-between">
           <div className="min-w-0">
             {!reveal && (
-              <div className={clsx('tabular font-mono tracking-[0.18em]', sm ? 'text-[12px]' : 'text-[15px]')}>
-                •••• {card.last4}
+              <div className={clsx('tabular font-mono whitespace-nowrap', sm ? 'text-[12px] tracking-[0.08em]' : 'text-[15px] tracking-[0.18em]')}>
+                {sm ? '••' : '••••'} {card.last4}
               </div>
             )}
             {!sm && (
