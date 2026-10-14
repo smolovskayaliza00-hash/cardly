@@ -19,7 +19,7 @@ import { BRAND } from '../app/brand';
 import { PageHeader } from '../components/PageHeader';
 import { Sheet } from '../components/Sheet';
 import { Badge, Divider, ListItem, Panel, SectionTitle, Segmented, Skeleton } from '../components/ui';
-import { isTelegram } from '../lib/telegram';
+import { isTelegram, openTelegramChat } from '../lib/telegram';
 import { toast, useUi, type ThemePref } from '../store/ui';
 import { Avatar } from './Home';
 
@@ -129,7 +129,7 @@ export function Profile() {
               icon={<LifeBuoy className="size-5" />}
               title="Поддержка"
               subtitle={`@${BRAND.supportUsername}`}
-              onClick={() => toast('В демо-режиме чат поддержки не подключён')}
+              onClick={() => openTelegramChat(BRAND.supportUsername)}
             />
             <Divider />
             <ListItem icon={<FileText className="size-5" />} title="Документы и условия" onClick={() => setDocsOpen(true)} />

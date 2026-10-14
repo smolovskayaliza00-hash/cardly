@@ -24,7 +24,7 @@ const WELCOME = (name) =>
 
 const HELP =
   `Нажмите кнопку ниже, чтобы открыть приложение.\n\n` +
-  `/start — приветствие\n/help — помощь`;
+  `/start — приветствие\n/help — помощь\n\nПоддержка: @lizzaa99`;
 
 export default async function handler(req, res) {
   // Однократная настройка: GET /api/telegram?setup=<WEBHOOK_SECRET> регистрирует вебхук на этот адрес

@@ -139,6 +139,13 @@ export const haptic = {
   },
 };
 
+/** Открывает чат/канал Telegram (t.me/...) внутри клиента, в браузере — в новой вкладке */
+export function openTelegramChat(username: string) {
+  const url = `https://t.me/${username}`;
+  if (tg && isTelegram) safe(() => tg.openTelegramLink(url));
+  else window.open(url, '_blank', 'noopener');
+}
+
 export function openExternalLink(url: string) {
   if (tg && isTelegram) safe(() => tg.openLink(url));
   else window.open(url, '_blank', 'noopener');

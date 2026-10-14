@@ -5,6 +5,6 @@
 export const BRAND = {
   name: 'Cardly Pay',
   short: 'Cardly',
-  supportUsername: 'CardlyPayBot',
+  supportUsername: 'lizzaa99',
   version: '0.1.0-prototype',
 } as const;
