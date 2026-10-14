@@ -7,14 +7,21 @@
 
 ## Ожидает решения
 
-- [ ] **GitHub-репозиторий:** нужна ссылка на пустой репозиторий, чтобы отправить код
-      и включить GitHub Pages (инструкция: [iphone-telegram.md](iphone-telegram.md)).
+- [x] **GitHub-репозиторий:** https://github.com/smolovskayaliza00-hash/cardly — код загружен.
 - [ ] **Визуальная проверка:** разрешение поставить Playwright + Chromium (~150 МБ, вне проекта)
       для скриншотов всех экранов в размере iPhone.
 - [ ] **Бренд:** финальное название вместо рабочего «Aurum Cards» (`apps/miniapp/src/app/brand.ts`).
 - [ ] **Тарифы:** подтвердить цены и комиссии (сейчас демо, `packages/shared/src/catalog.ts`).
 
 ---
+
+## 2026-10-14 — Код на GitHub
+
+- Репозиторий: https://github.com/smolovskayaliza00-hash/cardly (Public), ветка `main`.
+- Загрузка выполнена временным fine-grained ключом (только этот репозиторий, до 22.10.2026).
+  Ключ не сохранён ни в репозитории, ни в настройках git.
+- GitHub Pages включает владелец вручную (Settings → Pages → Source: GitHub Actions):
+  у ключа нет прав администратора.
 
 ## 2026-10-14 — Бот создан
 
