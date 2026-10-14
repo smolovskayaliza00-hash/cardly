@@ -27,7 +27,16 @@ const HELP =
   `/start — приветствие\n/help — помощь`;
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(200).send('ok');
+  // Однократная настройка: GET /api/telegram?setup=<WEBHOOK_SECRET> регистрирует вебхук на этот адрес
+  if (req.method === 'GET') {
+    if (process.env.WEBHOOK_SECRET && req.query?.setup === process.env.WEBHOOK_SECRET) {
+      const url = `https://${req.headers.host}/api/telegram`;
+      const r = await tg('setWebhook', { url, secret_token: process.env.WEBHOOK_SECRET, allowed_updates: ['message'] });
+      await tg('setMyCommands', { commands: [{ command: 'start', description: 'Открыть Cardly Pay' }, { command: 'help', description: 'Помощь' }] });
+      return res.status(200).send(r.ok ? `Готово! Бот подключён к ${url}` : `Ошибка: ${r.description}`);
+    }
+    return res.status(200).send('ok');
+  }
   // Проверка, что запрос пришёл от Telegram (secret_token из setWebhook)
   if (process.env.WEBHOOK_SECRET && req.headers['x-telegram-bot-api-secret-token'] !== process.env.WEBHOOK_SECRET) {
     return res.status(401).send('unauthorized');
