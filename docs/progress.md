@@ -15,6 +15,12 @@
 
 ---
 
+## 2026-10-14 — Приложение опубликовано
+
+- GitHub Pages включён (Source: GitHub Actions), сборка и деплой прошли успешно.
+- Адрес Mini App: **https://smolovskayaliza00-hash.github.io/cardly/**
+- Следующий шаг: вставить адрес в @BotFather → @CardlyPayBot → Bot Settings → Menu Button.
+
 ## 2026-10-14 — Код на GitHub
 
 - Репозиторий: https://github.com/smolovskayaliza00-hash/cardly (Public), ветка `main`.
