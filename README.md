@@ -77,6 +77,7 @@ pnpm dev            # Mini App на http://localhost:5173 (mock-режим)
 - [Просмотр на iPhone через Telegram](docs/iphone-telegram.md)
 - [Подключение API поставщика карт](docs/provider-integration.md)
 - [Правовые риски и комплаенс](docs/compliance.md) — **прочитать до подключения реальных денег**
+- [Журнал работы](docs/progress.md) — хронология решений, статус, открытые вопросы
 
 ## Этапы
 
