@@ -103,6 +103,7 @@ export function createDemoUser(input: DemoUserInput, mode: DemoResetMode, now = 
     username: input.username,
     photoUrl: input.photoUrl,
     kycStatus: mode === 'seeded' ? 'approved' : 'none',
+    kycLevel: mode === 'seeded' ? 'basic' : undefined,
     subscription: mode === 'seeded' ? { active: true, renewsAt: renews.toISOString() } : { active: false },
     createdAt: new Date(now.getTime() - 64 * 86_400_000).toISOString(),
   };

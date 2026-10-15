@@ -136,13 +136,19 @@ export interface TopUp {
 
 export type KycDocumentType = 'passport_ru' | 'passport_intl' | 'id_card' | 'residence_permit';
 
+export type KycLevel = 'basic' | 'extended';
+export type KycOutcome = 'approved' | 'resubmission' | 'rejected';
+
 export interface KycStartRequest {
   country: string;
   documentType: KycDocumentType;
   consent: true;
+  level: KycLevel;
+  /** Только демо: какой результат проверки сымитировать */
+  demoOutcome?: KycOutcome;
 }
 
-export type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
+export type KycStatus = 'none' | 'pending' | 'approved' | 'resubmission' | 'rejected';
 
 export interface UserProfile {
   id: string;
@@ -153,7 +159,17 @@ export interface UserProfile {
   photoUrl?: string;
   kycStatus: KycStatus;
   /** Данные заявки на верификацию (без самих документов — их хранит KYC-провайдер) */
-  kyc?: { country: string; documentType: KycDocumentType; submittedAt: string };
+  kyc?: {
+    country: string;
+    documentType: KycDocumentType;
+    submittedAt: string;
+    /** Уровень, на который подана заявка */
+    level: KycLevel;
+    /** Причина для статусов resubmission / rejected */
+    reason?: string;
+  };
+  /** Подтверждённый уровень верификации */
+  kycLevel?: KycLevel;
   /** Активная подписка (если есть) */
   subscription: { active: boolean; renewsAt?: string };
   createdAt: string;

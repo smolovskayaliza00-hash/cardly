@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   DEFAULT_LIMITS,
   TOPUP_METHODS,
+  applyKycOutcome,
   checkCanIssue,
   computeTopUpQuote,
   createDemoState,
@@ -84,14 +85,12 @@ export class AppService {
   }
 
   startKyc(u: UserRecord, req: KycStartRequest): UserProfile {
-    u.profile.kyc = { country: req.country, documentType: req.documentType, submittedAt: new Date().toISOString() };
-    // В продакшене: создать заявку у KYC-провайдера и ждать вебхук с результатом
-    if (u.profile.kycStatus === 'none' || u.profile.kycStatus === 'rejected') {
-      u.profile.kycStatus = 'pending';
-      setTimeout(() => {
-        u.profile.kycStatus = 'approved';
-      }, 3_500);
-    }
+    // В продакшене: создать заявку у KYC-провайдера (KycProvider) и ждать вебхук с результатом
+    if (u.profile.kycStatus === 'pending') return u.profile;
+    u.profile.kyc = { country: req.country, documentType: req.documentType, level: req.level, submittedAt: new Date().toISOString() };
+    u.profile.kycStatus = 'pending';
+    const outcome = this.providers.cards instanceof MockCardProvider ? (req.demoOutcome ?? 'approved') : 'approved';
+    setTimeout(() => applyKycOutcome(u.profile, outcome), 3_500);
     return u.profile;
   }
 

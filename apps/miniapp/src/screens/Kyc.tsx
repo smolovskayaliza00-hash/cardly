@@ -1,14 +1,17 @@
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, Check, CheckCircle2, FileText, Loader2, ScanFace, ShieldCheck } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-import type { KycDocumentType } from '@cardapp/shared';
+import { Camera, Check, CheckCircle2, FileText, Home, LifeBuoy, Loader2, RotateCcw, ScanFace, ShieldCheck, XCircle } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { KYC_LEVELS, formatMoney, type KycDocumentType, type KycLevel, type KycOutcome } from '@cardapp/shared';
+import { BRAND } from '../app/brand';
+import { notifyBot } from '../lib/notify';
+import { openTelegramChat } from '../lib/telegram';
 import { useCards, useMe, useStartKyc } from '../api/hooks';
 import { MainButton, MainButtonSpacer } from '../components/MainButton';
 import { PageHeader } from '../components/PageHeader';
 import { Sheet } from '../components/Sheet';
-import { DemoBadge, Panel, Skeleton } from '../components/ui';
+import { Button, DemoBadge, Panel, Skeleton } from '../components/ui';
 import { haptic } from '../lib/telegram';
 
 /**
@@ -32,8 +35,7 @@ const DOCUMENTS: { id: KycDocumentType; title: string; hint: string; countries?:
   { id: 'residence_permit', title: 'Вид на жительство', hint: 'Лицевая сторона' },
 ];
 
-type Step = 'intro' | 'document' | 'photo' | 'selfie' | 'review';
-const STEPS: Step[] = ['intro', 'document', 'photo', 'selfie', 'review'];
+type Step = 'intro' | 'document' | 'photo' | 'selfie' | 'address' | 'review';
 
 function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
   return (
@@ -61,7 +63,7 @@ function Choice({ selected, onClick, children }: { selected: boolean; onClick: (
 }
 
 /** Демо-«видоискатель»: рамка и анимация съёмки без доступа к камере */
-function DemoCapture({ kind, done, onCapture }: { kind: 'document' | 'selfie'; done: boolean; onCapture: () => void }) {
+function DemoCapture({ kind, done, onCapture }: { kind: 'document' | 'selfie' | 'address'; done: boolean; onCapture: () => void }) {
   const [shooting, setShooting] = useState(false);
   const shoot = () => {
     if (done || shooting) return;
@@ -76,7 +78,15 @@ function DemoCapture({ kind, done, onCapture }: { kind: 'document' | 'selfie'; d
   return (
     <button onClick={shoot} className="relative mx-auto flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-3xl bg-black">
       <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_40%,#2a2418,#000)]" />
-      {kind === 'document' ? (
+      {kind === 'address' ? (
+        <div className={clsx('relative aspect-[0.72] w-[42%] rounded-lg border-2 border-dashed p-3', done ? 'border-success' : 'border-gold/70')}>
+          <div className="space-y-2">
+            {[90, 70, 80, 50, 75, 60].map((w, i) => (
+              <div key={i} className="h-1.5 rounded bg-white/15" style={{ width: `${w}%` }} />
+            ))}
+          </div>
+        </div>
+      ) : kind === 'document' ? (
         <div className={clsx('relative aspect-[1.42] w-[78%] rounded-xl border-2 border-dashed', done ? 'border-success' : 'border-gold/70')}>
           <div className="absolute top-3 left-3 h-[55%] w-[28%] rounded-md bg-white/10" />
           <div className="absolute top-4 right-4 left-[36%] space-y-2">
@@ -112,52 +122,111 @@ function DemoCapture({ kind, done, onCapture }: { kind: 'document' | 'selfie'; d
   );
 }
 
+function LevelsPanel({ current }: { current?: KycLevel }) {
+  return (
+    <Panel className="divide-y divide-line">
+      {(Object.keys(KYC_LEVELS) as KycLevel[]).map((lvl) => {
+        const l = KYC_LEVELS[lvl];
+        const active = current === lvl;
+        return (
+          <div key={lvl} className="px-4 py-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[15px] font-semibold">{l.title}</span>
+              {active ? (
+                <span className="text-[12px] font-semibold text-success">● Ваш уровень</span>
+              ) : (
+                <span className="text-[12px] text-faint">{l.requirements}</span>
+              )}
+            </div>
+            <div className="mt-1 text-[13px] text-muted">
+              Пополнения до {formatMoney(l.topUpMonthlyRubMinor, 'RUB')} в месяц · баланс до {formatMoney(l.maxBalanceUsdMinor, 'USD')}
+            </div>
+          </div>
+        );
+      })}
+    </Panel>
+  );
+}
+
 function StatusView() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const { data: cards } = useCards();
   if (!me) return null;
-  const approved = me.kycStatus === 'approved';
+  const pending = me.kycStatus === 'pending';
   const doc = DOCUMENTS.find((d) => d.id === me.kyc?.documentType);
   const country = COUNTRIES.find((c) => c.code === me.kyc?.country);
 
   return (
     <div>
       <PageHeader back right={<DemoBadge />} />
-      <div className="flex flex-col items-center px-6 pt-6 text-center">
+      <div className="flex flex-col items-center px-6 pt-4 text-center">
         <motion.div
           key={me.kycStatus}
           initial={{ scale: 0.7, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className={clsx('flex size-24 items-center justify-center rounded-[32px]', approved ? 'bg-success/15 text-success' : 'bg-gold/12 text-gold')}
+          className={clsx('flex size-24 items-center justify-center rounded-[32px]', pending ? 'bg-gold/12 text-gold' : 'bg-success/15 text-success')}
         >
-          {approved ? <CheckCircle2 className="size-12" /> : <Loader2 className="size-12 animate-spin" />}
+          {pending ? <Loader2 className="size-12 animate-spin" /> : <CheckCircle2 className="size-12" />}
         </motion.div>
         <h1 className="font-display mt-6 text-[28px] font-bold tracking-tight">
-          {approved ? 'Верификация пройдена' : 'Проверяем документы'}
+          {pending ? 'Проверяем документы' : 'Верификация пройдена'}
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-muted">
-          {approved
-            ? 'Теперь вам доступен выпуск карт'
-            : 'Обычно до 5 минут. Можно закрыть приложение — бот пришлёт уведомление.'}
+          {pending
+            ? 'Обычно до 5 минут. Можно закрыть приложение — бот пришлёт уведомление.'
+            : `Уровень: ${KYC_LEVELS[me.kycLevel ?? 'basic'].title.toLowerCase()}`}
         </p>
       </div>
-      {me.kyc && (
-        <div className="px-5 pt-8">
+      <div className="space-y-4 px-5 pt-8">
+        {me.kyc && pending && (
           <Panel className="divide-y divide-line">
             <Row label="Страна" value={country ? `${country.flag} ${country.name}` : me.kyc.country} />
             <Row label="Документ" value={doc?.title ?? '—'} />
-            <Row label="Статус" value={approved ? 'Одобрено' : 'На проверке'} />
+            <Row label="Уровень" value={KYC_LEVELS[me.kyc.level].title} />
           </Panel>
-        </div>
-      )}
+        )}
+        {!pending && (
+          <>
+            <LevelsPanel current={me.kycLevel} />
+            {me.kycLevel === 'basic' && (
+              <Button variant="surface" block icon={<Home className="size-4" />} onClick={() => navigate('/kyc?level=extended')}>
+                Повысить до расширенного
+              </Button>
+            )}
+          </>
+        )}
+      </div>
       <MainButtonSpacer />
-      {approved && (
+      {!pending && (
         <MainButton
           text={cards?.length ? 'Готово' : 'Выпустить карту'}
           onClick={() => (cards?.length ? navigate(-1) : navigate('/issue', { replace: true }))}
         />
       )}
+    </div>
+  );
+}
+
+function RejectedView({ reason, onRetry }: { reason?: string; onRetry: () => void }) {
+  return (
+    <div>
+      <PageHeader back right={<DemoBadge />} />
+      <div className="flex flex-col items-center px-6 pt-4 text-center">
+        <div className="flex size-24 items-center justify-center rounded-[32px] bg-danger/12 text-danger">
+          <XCircle className="size-12" />
+        </div>
+        <h1 className="font-display mt-6 text-[28px] font-bold tracking-tight">Верификация не пройдена</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">{reason}</p>
+      </div>
+      <div className="space-y-2 px-5 pt-8">
+        <Button size="lg" block icon={<LifeBuoy className="size-5" />} onClick={() => openTelegramChat(BRAND.supportUsername)}>
+          Написать в поддержку
+        </Button>
+        <Button size="lg" variant="surface" block icon={<RotateCcw className="size-5" />} onClick={onRetry}>
+          Попробовать снова · демо
+        </Button>
+      </div>
     </div>
   );
 }
@@ -171,10 +240,50 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+const OUTCOMES: { id: KycOutcome; label: string }[] = [
+  { id: 'approved', label: 'Одобрить' },
+  { id: 'resubmission', label: 'Переснять' },
+  { id: 'rejected', label: 'Отказ' },
+];
+
+/** Новый экземпляр мастера при смене параметров (?level=extended) — шаги начинаются заново */
+export function KycRoute() {
+  const { search } = useLocation();
+  return <Kyc key={search} />;
+}
+
 export function Kyc() {
   const { data: me } = useMe();
   const start = useStartKyc();
+  const [params] = useSearchParams();
+  const upgrade = params.get('level') === 'extended';
   const [step, setStep] = useState<Step>('intro');
+  const [outcome, setOutcome] = useState<KycOutcome>('approved');
+  const [retry, setRetry] = useState(false);
+  const [addressDone, setAddressDone] = useState(false);
+
+  // Уведомление в боте, когда проверка завершилась (переход из pending)
+  const prevStatus = useRef(me?.kycStatus);
+  useEffect(() => {
+    const prev = prevStatus.current;
+    prevStatus.current = me?.kycStatus;
+    if (prev !== 'pending' || !me || me.kycStatus === 'pending') return;
+    if (me.kycStatus === 'approved') notifyBot('kyc_approved', { level: me.kycLevel ?? 'basic' });
+    if (me.kycStatus === 'resubmission') notifyBot('kyc_resubmission');
+    if (me.kycStatus === 'rejected') notifyBot('kyc_rejected');
+  }, [me]);
+
+  // При «переснять» сразу ведём к фото, сохранив страну и документ
+  useEffect(() => {
+    if (me?.kycStatus === 'resubmission' && me.kyc) {
+      setCountry(me.kyc.country);
+      setDoc(me.kyc.documentType);
+      setConsent(true);
+      setPhotoDone(false);
+      setSelfieDone(false);
+      setStep('photo');
+    }
+  }, [me?.kycStatus]); // eslint-disable-line react-hooks/exhaustive-deps
   const [consent, setConsent] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
   const [country, setCountry] = useState('RU');
@@ -189,8 +298,27 @@ export function Kyc() {
       </div>
     );
   }
-  if (me.kycStatus === 'approved' || me.kycStatus === 'pending') return <StatusView />;
+  if (me.kycStatus === 'pending') return <StatusView />;
+  if (me.kycStatus === 'approved' && !(upgrade && me.kycLevel === 'basic')) return <StatusView />;
+  if (me.kycStatus === 'rejected' && !retry) {
+    return (
+      <RejectedView
+        reason={me.kyc?.reason}
+        onRetry={() => {
+          setStep('intro');
+          setPhotoDone(false);
+          setSelfieDone(false);
+          setAddressDone(false);
+          setRetry(true);
+        }}
+      />
+    );
+  }
 
+  const level: KycLevel = upgrade || me.kyc?.level === 'extended' ? 'extended' : 'basic';
+  const STEPS: Step[] = level === 'extended'
+    ? ['intro', 'document', 'photo', 'selfie', 'address', 'review']
+    : ['intro', 'document', 'photo', 'selfie', 'review'];
   const idx = STEPS.indexOf(step);
   const next = () => setStep(STEPS[idx + 1]!);
   const docs = DOCUMENTS.filter((d) => !d.countries || d.countries.includes(country));
@@ -201,15 +329,26 @@ export function Kyc() {
     document: { text: 'Далее', onClick: next },
     photo: { text: photoDone ? 'Далее' : 'Сначала сфотографируйте документ', disabled: !photoDone, onClick: next },
     selfie: { text: selfieDone ? 'Далее' : 'Сначала сделайте селфи', disabled: !selfieDone, onClick: next },
+    address: { text: addressDone ? 'Далее' : 'Сначала загрузите документ', disabled: !addressDone, onClick: next },
     review: {
       text: 'Отправить на проверку',
-      onClick: () => start.mutate({ country, documentType: doc, consent: true }, { onSuccess: () => haptic.success() }),
+      onClick: () =>
+        start.mutate({ country, documentType: doc, consent: true, level, demoOutcome: outcome }, { onSuccess: () => haptic.success() }),
     },
   };
 
   return (
     <div>
-      <PageHeader back title="Верификация" right={<DemoBadge />} />
+      <PageHeader back title={level === 'extended' ? 'Расширенная' : 'Верификация'} right={<DemoBadge />} />
+      {me.kycStatus === 'resubmission' && me.kyc?.reason && (
+        <div className="mx-5 mb-4 flex items-start gap-3 rounded-2xl border border-warning/25 bg-warning/8 p-4">
+          <RotateCcw className="mt-0.5 size-5 shrink-0 text-warning" />
+          <div>
+            <div className="text-[15px] font-semibold">Нужно переснять</div>
+            <div className="text-[13px] text-muted">{me.kyc.reason}</div>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1.5 px-5 pb-5">
         {STEPS.map((s, i) => (
@@ -346,6 +485,16 @@ export function Kyc() {
             </div>
           )}
 
+          {step === 'address' && (
+            <div>
+              <h2 className="text-[20px] font-semibold">Подтверждение адреса</h2>
+              <p className="mt-1 mb-4 text-[14px] text-muted">
+                Выписка из банка или квитанция ЖКУ не старше 3 месяцев, с вашим ФИО и адресом.
+              </p>
+              <DemoCapture kind="address" done={addressDone} onCapture={() => setAddressDone(true)} />
+            </div>
+          )}
+
           {step === 'review' && (
             <div>
               <h2 className="text-[20px] font-semibold">Проверьте данные</h2>
@@ -354,7 +503,31 @@ export function Kyc() {
                 <Row label="Документ" value={docInfo.title} />
                 <Row label="Фото документа" value="✓ Принято" />
                 <Row label="Селфи" value="✓ Принято" />
+                {level === 'extended' && <Row label="Адрес" value="✓ Принято" />}
+                <Row label="Уровень" value={KYC_LEVELS[level].title} />
               </Panel>
+              <div className="mt-5 rounded-2xl bg-surface-2 p-4">
+                <div className="mb-2 flex items-center gap-2 text-[13px] font-semibold text-muted">
+                  <DemoBadge /> Результат проверки
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {OUTCOMES.map((o) => (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        haptic.selection();
+                        setOutcome(o.id);
+                      }}
+                      className={clsx(
+                        'rounded-xl py-2 text-[13px] font-semibold',
+                        outcome === o.id ? 'bg-gold/15 text-gold' : 'bg-surface-3 text-muted',
+                      )}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <p className="mt-4 px-1 text-[12px] leading-snug text-faint">
                 В рабочей версии фото передаются напрямую KYC-провайдеру и не хранятся на наших серверах.
               </p>

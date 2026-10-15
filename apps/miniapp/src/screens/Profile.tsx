@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { KycStatus } from '@cardapp/shared';
+import { KYC_LEVELS, type KycStatus } from '@cardapp/shared';
 import { api } from '../api';
 import { useMe, useResetDemo } from '../api/hooks';
 import { BRAND } from '../app/brand';
@@ -26,6 +26,7 @@ import { Avatar } from './Home';
 const KYC_LABEL: Record<KycStatus, { text: string; tone: 'success' | 'warning' | 'danger' | 'default' }> = {
   approved: { text: 'Пройдена', tone: 'success' },
   pending: { text: 'Проверка', tone: 'warning' },
+  resubmission: { text: 'Переснять', tone: 'warning' },
   rejected: { text: 'Отклонена', tone: 'danger' },
   none: { text: 'Не пройдена', tone: 'default' },
 };
@@ -81,6 +82,7 @@ export function Profile() {
           <ListItem
             icon={<ShieldCheck className="size-5" />}
             title="Верификация"
+            subtitle={me?.kycLevel ? `Уровень: ${KYC_LEVELS[me.kycLevel].title.toLowerCase()}` : undefined}
             right={me && <Badge tone={KYC_LABEL[me.kycStatus].tone}>{KYC_LABEL[me.kycStatus].text}</Badge>}
             onClick={() => navigate('/kyc')}
           />

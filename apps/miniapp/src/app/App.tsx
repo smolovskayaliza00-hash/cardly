@@ -13,7 +13,7 @@ import { TopUpStatus } from '../screens/TopUpStatus';
 import { History } from '../screens/History';
 import { Tariffs } from '../screens/Tariffs';
 import { Profile } from '../screens/Profile';
-import { Kyc } from '../screens/Kyc';
+import { KycRoute } from '../screens/Kyc';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,7 +39,7 @@ const router = createHashRouter([
       { path: '/history', element: <History /> },
       { path: '/tariffs', element: <Tariffs /> },
       { path: '/profile', element: <Profile /> },
-      { path: '/kyc', element: <Kyc /> },
+      { path: '/kyc', element: <KycRoute /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

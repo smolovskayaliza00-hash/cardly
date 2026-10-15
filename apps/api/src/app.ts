@@ -32,6 +32,8 @@ const kycSchema = z.object({
   country: z.string().length(2),
   documentType: z.enum(['passport_ru', 'passport_intl', 'id_card', 'residence_permit']),
   consent: z.literal(true),
+  level: z.enum(['basic', 'extended']),
+  demoOutcome: z.enum(['approved', 'resubmission', 'rejected']).optional(),
 });
 const limitsSchema = z.object({
   perTransaction: z.number().int().positive(),

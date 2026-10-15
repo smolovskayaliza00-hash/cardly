@@ -2,6 +2,7 @@ import {
   TARIFF_LIST,
   TOPUP_METHODS,
   checkCanIssue,
+  applyKycOutcome,
   computeTopUpQuote,
   createDemoState,
   demoId,
@@ -10,6 +11,7 @@ import {
   type Card,
   type DemoResetMode,
   type DemoState,
+  type KycOutcome,
   type TopUp,
   type Transaction,
 } from '@cardapp/shared';
@@ -30,6 +32,7 @@ const TOPUP_TTL_MS = 15 * 60_000;
 interface MockState extends DemoState {
   topUps: TopUp[];
   kycStartedAt?: string;
+  kycOutcome?: KycOutcome;
   topUpPaidAt: Record<string, string>;
 }
 
@@ -93,7 +96,7 @@ function tick() {
   }
 
   if (state.user.kycStatus === 'pending' && state.kycStartedAt && now - Date.parse(state.kycStartedAt) > KYC_DURATION_MS) {
-    state.user.kycStatus = 'approved';
+    applyKycOutcome(state.user, state.kycOutcome ?? 'approved');
     changed = true;
   }
 
@@ -150,7 +153,8 @@ export function createMockClient(): ApiClient {
 
     async startKyc(req) {
       await delay(600, 900);
-      state.user.kyc = { country: req.country, documentType: req.documentType, submittedAt: new Date().toISOString() };
+      state.user.kyc = { country: req.country, documentType: req.documentType, level: req.level, submittedAt: new Date().toISOString() };
+      state.kycOutcome = req.demoOutcome ?? 'approved';
       state.user.kycStatus = 'pending';
       state.kycStartedAt = new Date().toISOString();
       save();

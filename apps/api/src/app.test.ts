@@ -41,6 +41,7 @@ test('демо-сценарий: профиль, карты, пополнени�
   const me = (await app.inject({ method: 'GET', url: '/api/me', headers: h })).json<UserProfile>();
   assert.equal(me.firstName, 'Иван');
   assert.equal(me.kycStatus, 'approved');
+  assert.equal(me.kycLevel, 'basic');
 
   const cards = (await app.inject({ method: 'GET', url: '/api/cards', headers: h })).json<Card[]>();
   assert.equal(cards.length, 3);

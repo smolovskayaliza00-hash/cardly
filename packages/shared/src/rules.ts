@@ -1,5 +1,5 @@
 import { DEMO_RATES, TARIFFS, TOPUP_METHODS } from './catalog';
-import type { Card, CardCurrency, TariffId, TopUpMethod, TopUpQuote, UserProfile } from './types';
+import type { Card, CardCurrency, KycOutcome, TariffId, TopUpMethod, TopUpQuote, UserProfile } from './types';
 
 /** Бизнес-правила, одинаковые для клиента (предпросмотр) и сервера (источник истины). */
 
@@ -23,7 +23,7 @@ export type IssueCheck =
   | { ok: false; code: 'KYC_REQUIRED' | 'CARD_LIMIT_REACHED'; message: string };
 
 export function checkCanIssue(user: UserProfile, cards: Card[], tariffId: TariffId): IssueCheck {
-  if (user.kycStatus !== 'approved') {
+  if (!user.kycLevel) {
     return { ok: false, code: 'KYC_REQUIRED', message: 'Для выпуска карты пройдите верификацию' };
   }
   const tariff = TARIFFS[tariffId];
@@ -41,6 +41,22 @@ export function checkCanIssue(user: UserProfile, cards: Card[], tariffId: Tariff
       : { ok: true, chargeRubMinor: tariff.priceMinor, chargeReason: 'subscription' };
   }
   return { ok: true, chargeRubMinor: tariff.priceMinor, chargeReason: 'card' };
+}
+
+export const KYC_REASONS: Record<Exclude<KycOutcome, 'approved'>, string> = {
+  resubmission: 'Фото документа размыто или с бликом. Переснимите при хорошем освещении.',
+  rejected: 'Документ не прошёл проверку. Свяжитесь с поддержкой, чтобы уточнить причину.',
+};
+
+/** Применяет результат проверки к профилю (общая логика mock-клиента и сервера) */
+export function applyKycOutcome(user: UserProfile, outcome: KycOutcome) {
+  user.kycStatus = outcome;
+  if (outcome === 'approved') {
+    if (user.kyc) delete user.kyc.reason;
+    user.kycLevel = user.kyc?.level ?? 'basic';
+  } else if (user.kyc) {
+    user.kyc.reason = KYC_REASONS[outcome];
+  }
 }
 
 export function validateTopUpAmount(method: TopUpMethod, amountRubMinor: number): string | null {

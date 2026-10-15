@@ -1,4 +1,4 @@
-import type { CardCurrency, CardLimits, Tariff, TariffId, TopUpMethodInfo } from './types';
+import type { CardCurrency, CardLimits, KycLevel, Tariff, TariffId, TopUpMethodInfo } from './types';
 
 /**
  * Тарифы. Цены и комиссии — демонстрационные, задаются бизнесом
@@ -96,4 +96,20 @@ export const LIMIT_BOUNDS: Record<keyof CardLimits, { min: number; max: number; 
   perTransaction: { min: 50_00, max: 5_000_00, step: 50_00 },
   daily: { min: 100_00, max: 10_000_00, step: 100_00 },
   monthly: { min: 500_00, max: 50_000_00, step: 500_00 },
+};
+
+/** Уровни верификации и лимиты (демо-значения, финальные — по требованиям партнёра) */
+export const KYC_LEVELS: Record<KycLevel, { title: string; requirements: string; topUpMonthlyRubMinor: number; maxBalanceUsdMinor: number }> = {
+  basic: {
+    title: 'Базовая',
+    requirements: 'Документ и селфи',
+    topUpMonthlyRubMinor: 300_000_00,
+    maxBalanceUsdMinor: 3_000_00,
+  },
+  extended: {
+    title: 'Расширенная',
+    requirements: 'Плюс подтверждение адреса',
+    topUpMonthlyRubMinor: 3_000_000_00,
+    maxBalanceUsdMinor: 30_000_00,
+  },
 };
