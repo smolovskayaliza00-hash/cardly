@@ -2,6 +2,7 @@ import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ChevronDown, Crown } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatMoney, TOPUP_METHODS } from '@cardapp/shared';
 import { useMe, useSetSubscription, useTariffs } from '../api/hooks';
 import { PageHeader } from '../components/PageHeader';
@@ -31,6 +32,7 @@ const FAQ = [
 ];
 
 export function Tariffs() {
+  const navigate = useNavigate();
   const { data: me } = useMe();
   const { data: tariffs } = useTariffs();
   const setSub = useSetSubscription();
@@ -77,6 +79,19 @@ export function Tariffs() {
                     </li>
                   ))}
                 </ul>
+                {t.id === 'one_time' && (
+                  <div className="mt-5">
+                    {subActive ? (
+                      <Button variant="surface" block onClick={() => setConfirm('off')}>
+                        Перейти на «Разовый»
+                      </Button>
+                    ) : (
+                      <Button block onClick={() => navigate('/issue?tariff=one_time')}>
+                        Выпустить карту · {formatMoney(t.priceMinor, 'RUB')}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {t.id === 'subscription' && (
                   <div className="mt-5">
                     {subActive ? (
@@ -143,7 +158,7 @@ export function Tariffs() {
         <p className="mb-6 text-[15px] leading-relaxed text-muted">
           {confirm === 'on'
             ? 'В рабочей версии будет создан платёж через СБП и включено автопродление по правилам партнёра. Сейчас это демо — деньги не списываются.'
-            : 'Подписка будет отключена. В демо-режиме это произойдёт сразу.'}
+            : 'Подписка будет отключена, вы перейдёте на «Разовый»: без ежемесячной платы, выпуск — 1 990 ₽ за карту. В демо-режиме это произойдёт сразу.'}
         </p>
         <div className="space-y-2 pb-2">
           <Button

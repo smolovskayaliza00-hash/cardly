@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, CheckCircle2, Crown, ShieldAlert } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   TARIFFS,
   checkCanIssue,
@@ -122,7 +122,9 @@ export function IssueCard() {
   const [currency, setCurrency] = useState<CardCurrency>('USD');
   const [design, setDesign] = useState<CardDesign>('gold');
   const [label, setLabel] = useState('Подписки');
-  const [tariffId, setTariffId] = useState<TariffId | null>(null);
+  const [params] = useSearchParams();
+  const preset = params.get('tariff');
+  const [tariffId, setTariffId] = useState<TariffId | null>(preset === 'one_time' || preset === 'subscription' ? preset : null);
   const [issuedId, setIssuedId] = useState<string | null>(null);
 
   const effectiveTariff: TariffId = tariffId ?? (me?.subscription.active ? 'subscription' : 'one_time');
