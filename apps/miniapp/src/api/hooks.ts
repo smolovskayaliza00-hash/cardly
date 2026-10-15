@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CardLimits, DemoResetMode, IssueCardRequest, TopUpRequest, TransactionsQuery } from '@cardapp/shared';
+import type { KycStartRequest, CardLimits, DemoResetMode, IssueCardRequest, TopUpRequest, TransactionsQuery } from '@cardapp/shared';
 import { api } from './index';
 
 export const qk = {
@@ -93,7 +93,7 @@ export function useSimulatePayment() {
 
 export function useStartKyc() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: api.startKyc, onSuccess: (u) => qc.setQueryData(qk.me, u) });
+  return useMutation({ mutationFn: (req: KycStartRequest) => api.startKyc(req), onSuccess: (u) => qc.setQueryData(qk.me, u) });
 }
 
 export function useSetSubscription() {

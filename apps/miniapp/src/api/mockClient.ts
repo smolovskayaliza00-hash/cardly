@@ -148,8 +148,9 @@ export function createMockClient(): ApiClient {
       return clone(state.user);
     },
 
-    async startKyc() {
-      await delay();
+    async startKyc(req) {
+      await delay(600, 900);
+      state.user.kyc = { country: req.country, documentType: req.documentType, submittedAt: new Date().toISOString() };
       state.user.kycStatus = 'pending';
       state.kycStartedAt = new Date().toISOString();
       save();

@@ -11,6 +11,7 @@ import {
   type CardLimits,
   type DemoResetMode,
   type IssueCardRequest,
+  type KycStartRequest,
   type TopUp,
   type TopUpRequest,
   type TransactionsQuery,
@@ -82,7 +83,8 @@ export class AppService {
     return u.profile;
   }
 
-  startKyc(u: UserRecord): UserProfile {
+  startKyc(u: UserRecord, req: KycStartRequest): UserProfile {
+    u.profile.kyc = { country: req.country, documentType: req.documentType, submittedAt: new Date().toISOString() };
     // В продакшене: создать заявку у KYC-провайдера и ждать вебхук с результатом
     if (u.profile.kycStatus === 'none' || u.profile.kycStatus === 'rejected') {
       u.profile.kycStatus = 'pending';

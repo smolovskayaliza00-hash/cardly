@@ -28,6 +28,11 @@ const issueSchema = z.object({
   design: z.enum(['graphite', 'gold', 'obsidian', 'champagne']),
   label: z.string().max(20),
 });
+const kycSchema = z.object({
+  country: z.string().length(2),
+  documentType: z.enum(['passport_ru', 'passport_intl', 'id_card', 'residence_permit']),
+  consent: z.literal(true),
+});
 const limitsSchema = z.object({
   perTransaction: z.number().int().positive(),
   daily: z.number().int().positive(),
@@ -105,7 +110,7 @@ export function buildApp(config: Config, providers: Providers = createProviders(
     r.addHook('preHandler', authenticate);
 
     r.get('/api/me', async (req) => service.getProfile(req.account));
-    r.post('/api/kyc/start', async (req) => service.startKyc(req.account));
+    r.post('/api/kyc/start', async (req) => service.startKyc(req.account, kycSchema.parse(req.body)));
     r.post('/api/me/subscription', async (req) => {
       const { active } = z.object({ active: z.boolean() }).parse(req.body);
       return service.setSubscription(req.account, active);

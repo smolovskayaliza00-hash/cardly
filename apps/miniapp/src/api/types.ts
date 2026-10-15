@@ -4,6 +4,7 @@ import type {
   CardReveal,
   DemoResetMode,
   IssueCardRequest,
+  KycStartRequest,
   Tariff,
   TariffId,
   TopUp,
@@ -25,7 +26,7 @@ export interface ApiClient {
   readonly mode: 'mock' | 'http';
 
   getMe(): Promise<UserProfile>;
-  startKyc(): Promise<UserProfile>;
+  startKyc(req: KycStartRequest): Promise<UserProfile>;
   setSubscription(active: boolean): Promise<UserProfile>;
 
   getTariffs(): Promise<Tariff[]>;

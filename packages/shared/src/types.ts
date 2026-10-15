@@ -134,6 +134,14 @@ export interface TopUp {
   expiresAt: string;
 }
 
+export type KycDocumentType = 'passport_ru' | 'passport_intl' | 'id_card' | 'residence_permit';
+
+export interface KycStartRequest {
+  country: string;
+  documentType: KycDocumentType;
+  consent: true;
+}
+
 export type KycStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export interface UserProfile {
@@ -144,6 +152,8 @@ export interface UserProfile {
   username?: string;
   photoUrl?: string;
   kycStatus: KycStatus;
+  /** Данные заявки на верификацию (без самих документов — их хранит KYC-провайдер) */
+  kyc?: { country: string; documentType: KycDocumentType; submittedAt: string };
   /** Активная подписка (если есть) */
   subscription: { active: boolean; renewsAt?: string };
   createdAt: string;

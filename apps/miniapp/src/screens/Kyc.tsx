@@ -1,23 +1,186 @@
 import clsx from 'clsx';
-import { motion } from 'framer-motion';
-import { Camera, CheckCircle2, FileText, Loader2, ScanFace, ShieldCheck } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Camera, Check, CheckCircle2, FileText, Loader2, ScanFace, ShieldCheck } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { KycDocumentType } from '@cardapp/shared';
 import { useCards, useMe, useStartKyc } from '../api/hooks';
 import { MainButton, MainButtonSpacer } from '../components/MainButton';
 import { PageHeader } from '../components/PageHeader';
+import { Sheet } from '../components/Sheet';
 import { DemoBadge, Panel, Skeleton } from '../components/ui';
+import { haptic } from '../lib/telegram';
 
-const STEPS = [
-  { icon: FileText, title: 'Документ', text: 'Паспорт или ID-карта' },
-  { icon: Camera, title: 'Фото документа', text: 'Разворот с фотографией' },
-  { icon: ScanFace, title: 'Селфи', text: 'Проверка, что это вы' },
+/**
+ * Демо-флоу верификации. Камера не включается, файлы не создаются и никуда не отправляются.
+ * В рабочей версии шаги «Фото документа» и «Селфи» заменяет SDK KYC-провайдера партнёра.
+ */
+
+const COUNTRIES = [
+  { code: 'RU', name: 'Россия', flag: '🇷🇺' },
+  { code: 'KZ', name: 'Казахстан', flag: '🇰🇿' },
+  { code: 'BY', name: 'Беларусь', flag: '🇧🇾' },
+  { code: 'AM', name: 'Армения', flag: '🇦🇲' },
+  { code: 'UZ', name: 'Узбекистан', flag: '🇺🇿' },
+  { code: 'KG', name: 'Кыргызстан', flag: '🇰🇬' },
 ];
 
-export function Kyc() {
+const DOCUMENTS: { id: KycDocumentType; title: string; hint: string; countries?: string[] }[] = [
+  { id: 'passport_ru', title: 'Паспорт РФ', hint: 'Разворот с фотографией', countries: ['RU'] },
+  { id: 'passport_intl', title: 'Загранпаспорт', hint: 'Страница с фотографией' },
+  { id: 'id_card', title: 'ID-карта', hint: 'Лицевая и оборотная сторона' },
+  { id: 'residence_permit', title: 'Вид на жительство', hint: 'Лицевая сторона' },
+];
+
+type Step = 'intro' | 'document' | 'photo' | 'selfie' | 'review';
+const STEPS: Step[] = ['intro', 'document', 'photo', 'selfie', 'review'];
+
+function Choice({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      onClick={() => {
+        haptic.selection();
+        onClick();
+      }}
+      className={clsx(
+        'flex w-full items-center gap-3 rounded-2xl border-2 bg-surface px-4 py-3 text-left transition',
+        selected ? 'border-gold' : 'border-line',
+      )}
+    >
+      <div className="min-w-0 flex-1">{children}</div>
+      <span
+        className={clsx(
+          'flex size-6 shrink-0 items-center justify-center rounded-full border-2',
+          selected ? 'gold-fill border-transparent' : 'border-faint',
+        )}
+      >
+        {selected && <Check className="size-3.5" strokeWidth={3} />}
+      </span>
+    </button>
+  );
+}
+
+/** Демо-«видоискатель»: рамка и анимация съёмки без доступа к камере */
+function DemoCapture({ kind, done, onCapture }: { kind: 'document' | 'selfie'; done: boolean; onCapture: () => void }) {
+  const [shooting, setShooting] = useState(false);
+  const shoot = () => {
+    if (done || shooting) return;
+    setShooting(true);
+    haptic.impact('medium');
+    setTimeout(() => {
+      setShooting(false);
+      haptic.success();
+      onCapture();
+    }, 1200);
+  };
+  return (
+    <button onClick={shoot} className="relative mx-auto flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-3xl bg-black">
+      <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_40%,#2a2418,#000)]" />
+      {kind === 'document' ? (
+        <div className={clsx('relative aspect-[1.42] w-[78%] rounded-xl border-2 border-dashed', done ? 'border-success' : 'border-gold/70')}>
+          <div className="absolute top-3 left-3 h-[55%] w-[28%] rounded-md bg-white/10" />
+          <div className="absolute top-4 right-4 left-[36%] space-y-2">
+            <div className="h-2 rounded bg-white/15" />
+            <div className="h-2 w-3/4 rounded bg-white/15" />
+            <div className="h-2 w-1/2 rounded bg-white/15" />
+          </div>
+        </div>
+      ) : (
+        <div className={clsx('relative aspect-[3/4] w-[46%] rounded-[50%] border-2 border-dashed', done ? 'border-success' : 'border-gold/70')}>
+          <ScanFace className="absolute inset-0 m-auto size-14 text-white/20" strokeWidth={1.2} />
+        </div>
+      )}
+      {shooting && <motion.div className="absolute inset-0 bg-white" initial={{ opacity: 0.9 }} animate={{ opacity: 0 }} transition={{ duration: 0.5 }} />}
+      <div className="absolute inset-x-0 bottom-3 flex justify-center">
+        <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-[13px] font-semibold text-white">
+          {done ? (
+            <>
+              <CheckCircle2 className="size-4 text-success" /> Принято
+            </>
+          ) : shooting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Проверяем качество…
+            </>
+          ) : (
+            <>
+              <Camera className="size-4" /> Нажмите, чтобы снять · демо
+            </>
+          )}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function StatusView() {
   const navigate = useNavigate();
   const { data: me } = useMe();
   const { data: cards } = useCards();
+  if (!me) return null;
+  const approved = me.kycStatus === 'approved';
+  const doc = DOCUMENTS.find((d) => d.id === me.kyc?.documentType);
+  const country = COUNTRIES.find((c) => c.code === me.kyc?.country);
+
+  return (
+    <div>
+      <PageHeader back right={<DemoBadge />} />
+      <div className="flex flex-col items-center px-6 pt-6 text-center">
+        <motion.div
+          key={me.kycStatus}
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className={clsx('flex size-24 items-center justify-center rounded-[32px]', approved ? 'bg-success/15 text-success' : 'bg-gold/12 text-gold')}
+        >
+          {approved ? <CheckCircle2 className="size-12" /> : <Loader2 className="size-12 animate-spin" />}
+        </motion.div>
+        <h1 className="font-display mt-6 text-[28px] font-bold tracking-tight">
+          {approved ? 'Верификация пройдена' : 'Проверяем документы'}
+        </h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">
+          {approved
+            ? 'Теперь вам доступен выпуск карт'
+            : 'Обычно до 5 минут. Можно закрыть приложение — бот пришлёт уведомление.'}
+        </p>
+      </div>
+      {me.kyc && (
+        <div className="px-5 pt-8">
+          <Panel className="divide-y divide-line">
+            <Row label="Страна" value={country ? `${country.flag} ${country.name}` : me.kyc.country} />
+            <Row label="Документ" value={doc?.title ?? '—'} />
+            <Row label="Статус" value={approved ? 'Одобрено' : 'На проверке'} />
+          </Panel>
+        </div>
+      )}
+      <MainButtonSpacer />
+      {approved && (
+        <MainButton
+          text={cards?.length ? 'Готово' : 'Выпустить карту'}
+          onClick={() => (cards?.length ? navigate(-1) : navigate('/issue', { replace: true }))}
+        />
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3.5 text-[15px]">
+      <span className="text-muted">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
+
+export function Kyc() {
+  const { data: me } = useMe();
   const start = useStartKyc();
+  const [step, setStep] = useState<Step>('intro');
+  const [consent, setConsent] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [country, setCountry] = useState('RU');
+  const [doc, setDoc] = useState<KycDocumentType>('passport_ru');
+  const [photoDone, setPhotoDone] = useState(false);
+  const [selfieDone, setSelfieDone] = useState(false);
 
   if (!me) {
     return (
@@ -26,76 +189,190 @@ export function Kyc() {
       </div>
     );
   }
+  if (me.kycStatus === 'approved' || me.kycStatus === 'pending') return <StatusView />;
 
-  const status = me.kycStatus;
+  const idx = STEPS.indexOf(step);
+  const next = () => setStep(STEPS[idx + 1]!);
+  const docs = DOCUMENTS.filter((d) => !d.countries || d.countries.includes(country));
+  const docInfo = DOCUMENTS.find((d) => d.id === doc)!;
+
+  const main: Record<Step, { text: string; disabled?: boolean; onClick: () => void }> = {
+    intro: { text: 'Начать', disabled: !consent, onClick: next },
+    document: { text: 'Далее', onClick: next },
+    photo: { text: photoDone ? 'Далее' : 'Сначала сфотографируйте документ', disabled: !photoDone, onClick: next },
+    selfie: { text: selfieDone ? 'Далее' : 'Сначала сделайте селфи', disabled: !selfieDone, onClick: next },
+    review: {
+      text: 'Отправить на проверку',
+      onClick: () => start.mutate({ country, documentType: doc, consent: true }, { onSuccess: () => haptic.success() }),
+    },
+  };
 
   return (
     <div>
-      <PageHeader back right={<DemoBadge />} />
-      <div className="flex flex-col items-center px-6 text-center">
-        <motion.div
-          key={status}
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-          className={clsx(
-            'flex size-24 items-center justify-center rounded-[32px]',
-            status === 'approved' ? 'bg-success/15 text-success' : 'bg-gold/12 text-gold',
-          )}
-        >
-          {status === 'approved' ? (
-            <CheckCircle2 className="size-12" />
-          ) : status === 'pending' ? (
-            <Loader2 className="size-12 animate-spin" />
-          ) : (
-            <ShieldCheck className="size-12" />
-          )}
-        </motion.div>
+      <PageHeader back title="Верификация" right={<DemoBadge />} />
 
-        <h1 className="font-display mt-6 text-[28px] font-bold tracking-tight">
-          {status === 'approved' ? 'Верификация пройдена' : status === 'pending' ? 'Проверяем данные' : 'Верификация'}
-        </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-muted">
-          {status === 'approved'
-            ? 'Теперь вы можете выпускать карты'
-            : status === 'pending'
-              ? 'Обычно это занимает до 5 минут. Можно закрыть приложение — мы пришлём уведомление.'
-              : 'Проверка личности обязательна по требованиям партнёра-эмитента и законодательства о противодействии отмыванию денег.'}
-        </p>
+      <div className="flex gap-1.5 px-5 pb-5">
+        {STEPS.map((s, i) => (
+          <div key={s} className={clsx('h-1 flex-1 rounded-full transition-colors', i <= idx ? 'bg-gold' : 'bg-surface-3')} />
+        ))}
       </div>
 
-      {status !== 'approved' && (
-        <div className="px-5 pt-8">
-          <Panel className="divide-y divide-line">
-            {STEPS.map(({ icon: Icon, title, text }, i) => (
-              <div key={title} className="flex items-center gap-3 px-4 py-3.5">
-                <span className="flex size-10 items-center justify-center rounded-xl bg-surface-2 text-gold">
-                  <Icon className="size-5" />
-                </span>
-                <div className="flex-1">
-                  <div className="text-[15px] font-medium">{title}</div>
-                  <div className="text-[13px] text-muted">{text}</div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -24 }}
+          transition={{ duration: 0.2 }}
+          className="px-5"
+        >
+          {step === 'intro' && (
+            <div>
+              <div className="flex flex-col items-center text-center">
+                <div className="flex size-20 items-center justify-center rounded-[28px] bg-gold/12 text-gold">
+                  <ShieldCheck className="size-10" />
                 </div>
-                {status === 'pending' && <CheckCircle2 className="size-5 text-success" style={{ opacity: 1 - i * 0.25 }} />}
+                <p className="mt-4 text-[15px] leading-relaxed text-muted">
+                  Проверка личности обязательна по требованиям партнёра-эмитента и законодательства о противодействии
+                  отмыванию денег. Займёт 2–3 минуты.
+                </p>
               </div>
-            ))}
-          </Panel>
-          <p className="mt-4 px-1 text-[12px] leading-snug text-faint">
-            Прототип: документы не запрашиваются и не загружаются. В рабочей версии здесь откроется SDK
-            KYC-провайдера, которого использует партнёр.
-          </p>
-        </div>
-      )}
+              <Panel className="mt-6 divide-y divide-line">
+                {[
+                  { icon: FileText, t: 'Документ', s: 'Выберите страну и тип документа' },
+                  { icon: Camera, t: 'Фото документа', s: 'Без бликов, все углы в кадре' },
+                  { icon: ScanFace, t: 'Селфи', s: 'Проверка, что это вы' },
+                ].map(({ icon: Icon, t, s }) => (
+                  <div key={t} className="flex items-center gap-3 px-4 py-3.5">
+                    <span className="flex size-10 items-center justify-center rounded-xl bg-surface-2 text-gold">
+                      <Icon className="size-5" />
+                    </span>
+                    <div>
+                      <div className="text-[15px] font-medium">{t}</div>
+                      <div className="text-[13px] text-muted">{s}</div>
+                    </div>
+                  </div>
+                ))}
+              </Panel>
+              <button
+                onClick={() => {
+                  haptic.selection();
+                  setConsent(!consent);
+                }}
+                className="mt-4 flex w-full items-start gap-3 rounded-2xl border border-line bg-surface p-4 text-left"
+              >
+                <span
+                  className={clsx(
+                    'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border',
+                    consent ? 'gold-fill border-transparent' : 'border-faint',
+                  )}
+                >
+                  {consent && <Check className="size-3.5" strokeWidth={3} />}
+                </span>
+                <span className="text-[13px] leading-snug text-muted">
+                  Я даю согласие на обработку персональных данных и биометрии в соответствии с{' '}
+                  <span
+                    className="text-gold underline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPolicyOpen(true);
+                    }}
+                  >
+                    политикой конфиденциальности
+                  </span>
+                </span>
+              </button>
+              <p className="mt-3 px-1 text-[12px] leading-snug text-faint">
+                Прототип: камера не включается, документы не запрашиваются и никуда не отправляются.
+              </p>
+            </div>
+          )}
+
+          {step === 'document' && (
+            <div className="space-y-6">
+              <div>
+                <div className="mb-2 text-[13px] font-semibold tracking-wider text-muted uppercase">Страна выдачи</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {COUNTRIES.map((c) => (
+                    <button
+                      key={c.code}
+                      onClick={() => {
+                        haptic.selection();
+                        setCountry(c.code);
+                        if (c.code !== 'RU' && doc === 'passport_ru') setDoc('passport_intl');
+                      }}
+                      className={clsx(
+                        'flex items-center gap-2 rounded-2xl border-2 bg-surface px-3 py-3 text-left text-[15px] font-medium',
+                        country === c.code ? 'border-gold' : 'border-line',
+                      )}
+                    >
+                      <span className="text-[20px]">{c.flag}</span> {c.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-[13px] font-semibold tracking-wider text-muted uppercase">Документ</div>
+                <div className="space-y-2">
+                  {docs.map((d) => (
+                    <Choice key={d.id} selected={doc === d.id} onClick={() => setDoc(d.id)}>
+                      <div className="text-[15px] font-medium">{d.title}</div>
+                      <div className="text-[13px] text-muted">{d.hint}</div>
+                    </Choice>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 'photo' && (
+            <div>
+              <h2 className="text-[20px] font-semibold">{docInfo.title}</h2>
+              <p className="mt-1 mb-4 text-[14px] text-muted">{docInfo.hint}. Положите документ на тёмную поверхность.</p>
+              <DemoCapture kind="document" done={photoDone} onCapture={() => setPhotoDone(true)} />
+              <ul className="mt-4 space-y-1.5 text-[13px] text-muted">
+                <li>• Все четыре угла документа в кадре</li>
+                <li>• Без бликов и размытия</li>
+                <li>• Данные хорошо читаются</li>
+              </ul>
+            </div>
+          )}
+
+          {step === 'selfie' && (
+            <div>
+              <h2 className="text-[20px] font-semibold">Селфи</h2>
+              <p className="mt-1 mb-4 text-[14px] text-muted">Поместите лицо в овал, снимите очки и головной убор.</p>
+              <DemoCapture kind="selfie" done={selfieDone} onCapture={() => setSelfieDone(true)} />
+            </div>
+          )}
+
+          {step === 'review' && (
+            <div>
+              <h2 className="text-[20px] font-semibold">Проверьте данные</h2>
+              <Panel className="mt-4 divide-y divide-line">
+                <Row label="Страна" value={COUNTRIES.find((c) => c.code === country)!.name} />
+                <Row label="Документ" value={docInfo.title} />
+                <Row label="Фото документа" value="✓ Принято" />
+                <Row label="Селфи" value="✓ Принято" />
+              </Panel>
+              <p className="mt-4 px-1 text-[12px] leading-snug text-faint">
+                В рабочей версии фото передаются напрямую KYC-провайдеру и не хранятся на наших серверах.
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       <MainButtonSpacer />
-      {status === 'none' || status === 'rejected' ? (
-        <MainButton text="Пройти верификацию · демо" onClick={() => start.mutate()} loading={start.isPending} />
-      ) : status === 'approved' ? (
-        <MainButton
-          text={cards?.length ? 'Готово' : 'Выпустить карту'}
-          onClick={() => (cards?.length ? navigate(-1) : navigate('/issue', { replace: true }))}
-        />
-      ) : null}
+      <MainButton text={main[step].text} disabled={main[step].disabled} onClick={main[step].onClick} loading={start.isPending} />
+
+      <Sheet open={policyOpen} onClose={() => setPolicyOpen(false)} title="Персональные данные">
+        <div className="space-y-3 pb-4 text-[15px] leading-relaxed text-muted">
+          <p>Для верификации обрабатываются: ФИО, дата рождения, данные и изображение документа, фото лица.</p>
+          <p>Цель — проверка личности по требованиям партнёра-эмитента и законодательства о ПОД/ФТ.</p>
+          <p className="text-faint">Текст-заглушка. Финальную политику готовят юристы после выбора партнёра.</p>
+        </div>
+      </Sheet>
     </div>
   );
 }

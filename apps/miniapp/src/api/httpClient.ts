@@ -34,7 +34,7 @@ export function createHttpClient(baseUrl: string): ApiClient {
   return {
     mode: 'http',
     getMe: () => request('GET', '/me'),
-    startKyc: () => request('POST', '/kyc/start'),
+    startKyc: (req) => request('POST', '/kyc/start', req),
     setSubscription: (active) => request('POST', '/me/subscription', { active }),
     getTariffs: () => request('GET', '/tariffs'),
     getTopUpMethods: () => request('GET', '/topup-methods'),
