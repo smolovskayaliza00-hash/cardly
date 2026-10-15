@@ -14,6 +14,13 @@
 
 ---
 
+## 2026-10-15 — Бот отвечает на /start
+
+- Вебхук бота развёрнут на Vercel: проект `cardly-bot` (Root Directory `apps/bot`),
+  адрес https://cardly-bot.vercel.app/api/telegram. Переменные BOT_TOKEN, WEBHOOK_SECRET заданы в Vercel.
+- Токен бота перевыпущен (старый засветился в чате). Вебхук зарегистрирован через `?setup=<secret>`.
+- Каждый push в main передеплоит и Mini App (GitHub Pages), и бота (Vercel).
+
 ## 2026-10-15 — Поддержка и тарифы
 
 - «Поддержка» в профиле открывает личный чат @lizzaa99; контакт добавлен в /help бота.
